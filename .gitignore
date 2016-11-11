@@ -1,0 +1,6 @@
+# Cabal
+/dist
+
+# Emacs
+*~
+\#*\#
