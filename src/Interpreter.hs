@@ -12,7 +12,8 @@ import qualified Data.Map.Strict as Map
 import LambdaAST
 
 data Strategy = Strategy {
-  prepareArgument :: Context -> String -> LambdaTerm -> (Context, LambdaTerm)}
+  prepareArgument :: Context -> String -> LambdaTerm -> (Context, LambdaTerm),
+  lazy :: Bool}
 
 type Environment = Map.Map String LambdaTerm
 
@@ -35,12 +36,14 @@ varLookup context var = case Map.lookup var $ environment context of
 emptyEnvironment = Map.empty
 
 lambdaEval :: Context -> LambdaTerm -> (Context, LambdaTerm)
-lambdaEval context l@(Lambda parameter term) =
-  (context, l)
-  -- -- When should the body of a lambda be evaluated even if the
-  -- -- argument isn't supplied?
-  -- let (context', term') = lambdaEval context term in
-  --   (context', Lambda parameter term')
+lambdaEval context@Context {evalStrategy = Strategy {lazy = lazy}}
+  l@(Lambda parameter term) =
+  if lazy
+  then
+    (context, l)
+  else
+    let (context', term') = lambdaEval context term in
+      (context', Lambda parameter term')
 lambdaEval context a@(Application function argument) =
   lambdaApply context function argument
 lambdaEval context (Variable var) =
@@ -71,7 +74,8 @@ byValue =
   {
     evalStrategy = Strategy
     {
-      prepareArgument = prepareArgument
+      prepareArgument = prepareArgument,
+      lazy = True
     },
     environment = emptyEnvironment
   }
@@ -84,7 +88,8 @@ byName =
   {
     evalStrategy = Strategy
     {
-      prepareArgument = prepareArgument
+      prepareArgument = prepareArgument,
+      lazy = True
     },
     environment = emptyEnvironment
   }
