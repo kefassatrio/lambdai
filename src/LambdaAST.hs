@@ -22,8 +22,6 @@ where
 
 import qualified Data.Set as Set
 
-import Debug.Trace
-
 data LambdaTerm = Lambda { parameter :: String,
                            term :: LambdaTerm} |
                   Application { function :: LambdaTerm,
@@ -72,6 +70,20 @@ replaceIdsWithUniqueIds source destination =
 replaceWithSubtree :: String -> LambdaTerm -> LambdaTerm -> LambdaTerm
 replaceWithSubtree k v ast = replaceWithSubtree' k v (replaceIdsWithUniqueIds v ast)
 
+replaceVariable :: String -> LambdaTerm -> LambdaTerm -> LambdaTerm
+replaceVariable = replaceVariable' False
+
+replaceVariable' :: Bool -> String -> LambdaTerm -> LambdaTerm -> LambdaTerm
+replaceVariable' inLambda k v@(Variable var) l@(Lambda parameter term) =
+  if k == parameter
+  then Lambda var (replaceVariable' True k v term)
+  else Lambda parameter (replaceVariable' inLambda k v term)
+replaceVariable' inLambda k v a@(Application function argument) =
+  Application (replaceVariable' inLambda k v function) (replaceVariable' inLambda k v argument)
+replaceVariable' inLambda k v t@(Variable var) = if k == var && inLambda then v else t
+replaceVariable' inLambda k v d@(Definition name value) =
+  Definition name (replaceVariable' inLambda k v value)
+
 replaceWithSubtree' :: String -> LambdaTerm -> LambdaTerm -> LambdaTerm
 replaceWithSubtree' k v l@(Lambda parameter term) =
   if k == parameter then l else Lambda parameter (replaceWithSubtree' k v term)
@@ -80,15 +92,6 @@ replaceWithSubtree' k v a@(Application function argument) =
 replaceWithSubtree' k v t@(Variable var) = if k == var then v else t
 replaceWithSubtree' k v d@(Definition name value) =
   Definition name (replaceWithSubtree' k v value)
-
-replaceVariable :: String -> LambdaTerm -> LambdaTerm -> LambdaTerm
-replaceVariable k v@(Variable var) l@(Lambda parameter term) =
-  if k == parameter then Lambda var (replaceVariable k v term) else Lambda parameter (replaceVariable k v term)
-replaceVariable k v a@(Application function argument) =
-  Application (replaceVariable k v function) (replaceVariable k v argument)
-replaceVariable k v t@(Variable var) = if k == var then v else t
-replaceVariable k v d@(Definition name value) =
-  Definition name (replaceVariable k v value)
 
 lambdaPrint :: LambdaTerm -> IO ()
 lambdaPrint l = putStrLn $ show l
