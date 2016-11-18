@@ -13,7 +13,7 @@ import LambdaAST
 
 data Strategy = Strategy {
   prepareArgument :: Context -> String -> LambdaTerm -> (Context, LambdaTerm),
-  lazy :: Bool}
+  evalBodies :: Bool}
 
 type Environment = Map.Map String LambdaTerm
 
@@ -36,9 +36,9 @@ varLookup context var = case Map.lookup var $ environment context of
 emptyEnvironment = Map.empty
 
 lambdaEval :: Context -> LambdaTerm -> (Context, LambdaTerm)
-lambdaEval context@Context {evalStrategy = Strategy {lazy = lazy}}
+lambdaEval context@Context {evalStrategy = Strategy {evalBodies = evalBodies}}
   l@(Lambda parameter term) =
-  if lazy
+  if evalBodies
   then
     (context, l)
   else
@@ -59,7 +59,7 @@ lambdaEval context (Definition name value) =
 lambdaApply :: Context -> LambdaTerm -> LambdaTerm -> (Context, LambdaTerm)
 lambdaApply context (Lambda parameter term) argument =
   let (context', argument') =
-        prepareArgument (evalStrategy context) context parameter argument in
+        prepareArgument (evalStrategy context) context argument in
     lambdaEval context' (replaceWithSubtree parameter argument' term)
 lambdaApply context function argument =
   let (context', function') = lambdaEval context function in
@@ -75,13 +75,13 @@ byValue =
     evalStrategy = Strategy
     {
       prepareArgument = prepareArgument,
-      lazy = True
+      evalBodies = True
     },
     environment = emptyEnvironment
   }
   where
-    prepareArgument :: Context -> String -> LambdaTerm -> (Context, LambdaTerm)
-    prepareArgument context _ argument = lambdaEval context argument
+    prepareArgument :: Context -> LambdaTerm -> (Context, LambdaTerm)
+    prepareArgument context argument = lambdaEval context argument
 
 byName =
   Context
@@ -89,10 +89,10 @@ byName =
     evalStrategy = Strategy
     {
       prepareArgument = prepareArgument,
-      lazy = True
+      evalBodies = True
     },
     environment = emptyEnvironment
   }
   where
-    prepareArgument :: Context -> String -> LambdaTerm -> (Context, LambdaTerm)
-    prepareArgument context _ argument = (context, argument)
+    prepareArgument :: Context -> LambdaTerm -> (Context, LambdaTerm)
+    prepareArgument context argument = (context, argument)
