@@ -14,7 +14,7 @@ definition = do
 
 variable :: Parser LambdaTerm
 variable =
-  do var <- many1 $ noneOf "λ \t\n\r.()"
+  do var <- many1 $ noneOf "\\λ \t\n\r.()"
      return $ Variable var
 
 application :: Parser LambdaTerm
@@ -23,7 +23,7 @@ application =
 
 lambdaAbstraction :: Parser LambdaTerm
 lambdaAbstraction =
-  do char 'λ'
+  do char 'λ' <|> char '\\'
      x <- variable
      char '.'
      term <- lambdaTerm
