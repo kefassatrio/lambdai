@@ -4,7 +4,13 @@ module Interpreter
     byValue,
     byName,
 
-    Context
+    Context,
+    evalStrategy,
+
+    Strategy,
+    evalBodies,
+
+    defaultContext
   )
 where
 
@@ -12,7 +18,7 @@ import qualified Data.Map.Strict as Map
 import LambdaAST
 
 data Strategy = Strategy {
-  prepareArgument :: Context -> String -> LambdaTerm -> (Context, LambdaTerm),
+  prepareArgument :: Context -> LambdaTerm -> (Context, LambdaTerm),
   evalBodies :: Bool}
 
 type Environment = Map.Map String LambdaTerm
@@ -40,10 +46,10 @@ lambdaEval context@Context {evalStrategy = Strategy {evalBodies = evalBodies}}
   l@(Lambda parameter term) =
   if evalBodies
   then
-    (context, l)
-  else
     let (context', term') = lambdaEval context term in
       (context', Lambda parameter term')
+  else
+    (context, l)
 lambdaEval context a@(Application function argument) =
   lambdaApply context function argument
 lambdaEval context (Variable var) =
@@ -69,30 +75,26 @@ lambdaApply context function argument =
         (context'', Application function' argument')
     else lambdaApply context' function' argument
 
-byValue =
-  Context
+defaultContext = Context
   {
-    evalStrategy = Strategy
-    {
-      prepareArgument = prepareArgument,
-      evalBodies = True
-    },
+    evalStrategy = byName,
     environment = emptyEnvironment
   }
+
+byValue = Strategy
+          {
+            prepareArgument = prepareArgument,
+            evalBodies = False
+          }
   where
     prepareArgument :: Context -> LambdaTerm -> (Context, LambdaTerm)
     prepareArgument context argument = lambdaEval context argument
 
-byName =
-  Context
-  {
-    evalStrategy = Strategy
-    {
-      prepareArgument = prepareArgument,
-      evalBodies = True
-    },
-    environment = emptyEnvironment
-  }
+byName = Strategy
+         {
+           prepareArgument = prepareArgument,
+           evalBodies = False
+         }
   where
     prepareArgument :: Context -> LambdaTerm -> (Context, LambdaTerm)
     prepareArgument context argument = (context, argument)
