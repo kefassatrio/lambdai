@@ -20,6 +20,7 @@ module LambdaAST
   )
 where
 
+import Text.ParserCombinators.Parsec
 import qualified Data.Set as Set
 
 data LambdaTerm = Lambda { parameter :: String,
@@ -37,6 +38,28 @@ instance Show LambdaTerm where
   show (Variable var) = var
   show (Definition name value) = name ++ " = " ++ show value
 
+splitIdentifier :: String -> (String, Int)
+splitIdentifier id =
+  case parse idParser "" (reverse id) of
+    Left _ -> (id, 0)
+    Right t -> t
+  where
+    idParser = do
+      n <- many1 digit
+      id <- many1 anyChar
+      return (reverse id, read $ reverse n)
+
+generateUniqueId :: String -> LambdaTerm -> String
+generateUniqueId id ast = let (id', n) = splitIdentifier id in
+                            generateId id' n (listVariables ast)
+  where
+    generateId :: String -> Int -> Set.Set String -> String
+    generateId id n reserved =
+      let id' = id ++ (show n) in
+        if id' `Set.member` reserved
+        then generateId id (succ n) reserved
+        else id'
+
 listVariables :: LambdaTerm -> Set.Set String
 listVariables (Lambda param term) = Set.insert param (listVariables term)
 listVariables (Application function argument) =
@@ -50,16 +73,6 @@ listParameters  (Application function argument) =
   Set.union (listParameters function) (listParameters argument)
 listParameters (Variable var) = Set.empty
 listParameters (Definition name value) = (listParameters value)
-
-generateUniqueId :: String -> LambdaTerm -> String
-generateUniqueId id ast = generateId id 0 (listVariables ast)
-  where
-    generateId :: String -> Int -> Set.Set String -> String
-    generateId id n reserved =
-      let id' = id ++ (show n) in
-        if id' `Set.member` reserved
-        then generateId id (succ n) reserved
-        else id'
 
 replaceIdsWithUniqueIds :: LambdaTerm -> LambdaTerm -> LambdaTerm
 replaceIdsWithUniqueIds source destination =
