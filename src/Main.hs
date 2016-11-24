@@ -15,9 +15,8 @@ repl context =
      eof <- isEOF
      if eof
        then putStrLn "Bye!"
-       else readEvalPrint context
+       else getLine >>= parseInput
   where
-    readEvalPrint context = getLine >>= parseInput
     parseInput line | isEmptyLine line || isCommentLine line = repl context
     parseInput line | isPragma line =
                       case parsePragma line of
