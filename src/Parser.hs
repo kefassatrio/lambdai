@@ -1,6 +1,9 @@
-module Parser (lambdaRead) where
+module Parser (lambdaRead)
+where
 
+import Data.Char
 import Text.ParserCombinators.Parsec
+
 import LambdaAST
 
 definition :: Parser LambdaTerm
@@ -14,7 +17,7 @@ definition = do
 
 variable :: Parser LambdaTerm
 variable =
-  do var <- many1 $ noneOf "\\λ \t\n\r.()"
+  do var <- many1 $ satisfy (\c -> not (isSpace c) && not (elem c "\\λ.()"))
      return $ Variable var
 
 application :: Parser LambdaTerm
