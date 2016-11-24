@@ -27,9 +27,6 @@ data Context = Context {
   evalStrategy :: Strategy,
   environment :: Environment}
 
-instance Show Context where
-  show context = show $ Map.assocs $ environment context
-
 bind :: Context -> String -> LambdaTerm -> Context
 bind context var value =
   context {environment = Map.insert var value $ environment context}
@@ -42,15 +39,13 @@ varLookup context var = case Map.lookup var $ environment context of
 emptyEnvironment = Map.empty
 
 lambdaEval :: Context -> LambdaTerm -> (Context, LambdaTerm)
-lambdaEval context@Context {evalStrategy = Strategy {evalBodies = evalBodies}}
+lambdaEval context@Context {evalStrategy = Strategy {evalBodies = True}}
   l@(Lambda parameter term) =
-  if evalBodies
-  then
-    let (context', term') = lambdaEval context term in
-      (context', Lambda parameter term')
-  else
-    (context, l)
-lambdaEval context a@(Application function argument) =
+  let (context', term') = lambdaEval context term in
+    (context', Lambda parameter term')
+lambdaEval context@Context {evalStrategy = Strategy {evalBodies = False}}
+  l@(Lambda parameter term) = (context, l)
+lambdaEval context (Application function argument) =
   lambdaApply context function argument
 lambdaEval context (Variable var) =
   case varLookup context var of
