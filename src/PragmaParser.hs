@@ -23,7 +23,7 @@ instance Show Pragma where
 key :: Parser String
 key = many1 alphaNum
 
-value = key
+value = many1 anyChar
 
 pragma = do
   char ':'
