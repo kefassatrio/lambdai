@@ -18,20 +18,6 @@ repl context =
        then putStrLn "Bye!"
        else getLine >>= evalLine context >>= repl
 
-isEmptyLine :: String -> Bool
-isEmptyLine [] = True
-isEmptyLine _ = False
-
-isCommentLine :: String -> Bool
-isCommentLine [] = False
-isCommentLine ('#':_) = True
-isCommentLine _ = False
-
-isPragma :: String -> Bool
-isPragma [] = False
-isPragma (':':_) = True
-isPragma _ = False
-
 setPragma :: Pragma -> Context -> IO Context
 setPragma Pragma { pragmaOption = "passBy", pragmaValue = "value" } c =
   return c { evalStrategy = byValue }
@@ -44,7 +30,6 @@ setPragma Pragma { pragmaOption = "evalBodies", pragmaValue = "f" } c =
 setPragma Pragma { pragmaOption = "load", pragmaValue = path } c =
   do contents <- readFile path
      foldM evalLine c $ lines contents
-
 setPragma _ c = return c
 
 evalLine :: Context -> String -> IO Context
@@ -62,3 +47,17 @@ evalLine context line | isEmptyLine line || isCommentLine line = return context
                           Right term ->
                             let (context', term') = lambdaEval context term in
                               (putStrLn $ show term') >> return context'
+
+isEmptyLine :: String -> Bool
+isEmptyLine [] = True
+isEmptyLine _ = False
+
+isCommentLine :: String -> Bool
+isCommentLine [] = False
+isCommentLine ('#':_) = True
+isCommentLine _ = False
+
+isPragma :: String -> Bool
+isPragma [] = False
+isPragma (':':_) = True
+isPragma _ = False
