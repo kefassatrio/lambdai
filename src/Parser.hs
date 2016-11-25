@@ -17,7 +17,7 @@ definition = do
 
 variable :: Parser LambdaTerm
 variable =
-  do var <- many1 $ satisfy (\c -> not (isSpace c) && not (elem c "\\λ.()"))
+  do var <- many1 $ satisfy (\c -> not (isSpace c) && not (elem c "\\λ.()="))
      return $ Variable var
 
 application :: Parser LambdaTerm
@@ -46,4 +46,4 @@ lambdaTermNoApp =   (char '(' >> lambdaTerm >>= (\lt -> char ')' >> return lt))
                 <|> variable
 
 lambdaRead :: String -> Either ParseError LambdaTerm
-lambdaRead s = parse topLevelLambdaTerm "" s
+lambdaRead s = parse (topLevelLambdaTerm >>= (\term -> eof >> return term)) "" s
