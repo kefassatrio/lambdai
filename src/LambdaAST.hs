@@ -3,6 +3,8 @@ module LambdaAST
     lambdaPrint,
     replaceWithSubtree,
 
+    isRedex,
+
     LambdaTerm
     (
       Lambda,
@@ -105,6 +107,10 @@ replaceWithSubtree' k v a@(Application function argument) =
 replaceWithSubtree' k v t@(Variable var) = if k == var then v else t
 replaceWithSubtree' k v d@(Definition name value) =
   Definition name (replaceWithSubtree' k v value)
+
+isRedex :: LambdaTerm -> Bool
+isRedex Application { function = Lambda {} } = True
+isRedex _ = False
 
 lambdaPrint :: LambdaTerm -> IO ()
 lambdaPrint l = putStrLn $ show l
