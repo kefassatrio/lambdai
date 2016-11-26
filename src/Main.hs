@@ -1,8 +1,10 @@
 import System.IO
-import Parser
-import Interpreter
-import PragmaParser
 import Control.Monad
+
+import Parser
+import PragmaParser
+import Reducer
+import Reducer.Renderer
 
 main :: IO ()
 main =
@@ -11,22 +13,24 @@ main =
      repl defaultContext
 
 repl :: Context -> IO ()
-repl context =
+repl t =
   do putStr "λ> "
      eof <- isEOF
      if eof
        then putStrLn "Bye!"
-       else getLine >>= evalLine context >>= repl
+       else getLine >>= evalLine t >>= repl
 
 setPragma :: Pragma -> Context -> IO Context
-setPragma Pragma { pragmaOption = "passBy", pragmaValue = "value" } c =
-  return c { evalStrategy = byValue }
-setPragma Pragma { pragmaOption = "passBy", pragmaValue = "name" } c =
-  return c { evalStrategy = byName }
-setPragma Pragma { pragmaOption = "evalBodies", pragmaValue = "t" } c =
-  return c { evalStrategy = (evalStrategy c) { evalBodies = True }}
-setPragma Pragma { pragmaOption = "evalBodies", pragmaValue = "f" } c =
-  return c { evalStrategy = (evalStrategy c) { evalBodies = False }}
+setPragma Pragma { pragmaOption = "passBy", pragmaValue = value }
+  c@Context { strategy = s } =
+  case value of
+    "name" -> return c { strategy = s { pass = ByName } }
+    "value" -> return c { strategy = s { pass = ByValue} }
+setPragma Pragma { pragmaOption = "evalOrder", pragmaValue = value }
+  c@Context { strategy = s } =
+  case value of
+    "normal" -> return c { strategy = s { evalOrder = normalOrder } }
+    "applicative" -> return c { strategy = s { evalOrder = applicativeOrder } }
 setPragma Pragma { pragmaOption = "load", pragmaValue = path } c =
   do contents <- readFile path
      foldM evalLine c $ lines contents
@@ -45,8 +49,9 @@ evalLine context line | isEmptyLine line || isCommentLine line = return context
                           Left e ->
                             (putStrLn $ show e) >> return context
                           Right term ->
-                            let (context', term') = lambdaEval context term in
-                              (putStrLn $ show term') >> return context'
+                            let (table', trace) =
+                                  reduceToNormalForm (strategy context) (table context) term in
+                              (putStrLn $ render clRendererSpec trace) >> return context { table = table' }
 
 isEmptyLine :: String -> Bool
 isEmptyLine [] = True

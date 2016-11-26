@@ -5,10 +5,15 @@ module LambdaAST.Path
     findFirstInnermostRedex,
     findFirstOutermostRedex,
 
+    findInnermostUnboundOccurrence,
+    findOutermostUnboundOccurrence,
+
     replaceByPath,
 
     Branch (Left, Right),
-    Path
+    Path (Path),
+    descend,
+    root
   )
 where
 
@@ -25,6 +30,10 @@ newtype Path = Path [Branch]
 
 root = Path []
 
+instance Monoid Path where
+  mempty = root
+  mappend (Path a) (Path b) = Path $ a ++ b
+
 (<:>) :: Branch -> Path -> Path
 (<:>) b (Path p) = Path (b:p)
 
@@ -33,6 +42,11 @@ goRightThen p = Right <:> p
 
 goLeftThen :: Path -> Path
 goLeftThen p = Left <:> p
+
+descend :: Maybe Path -> Branch -> Maybe Path
+descend (Just (Path (Right:ps))) Right = Just $ Path ps
+descend (Just (Path (Left:ps))) Left = Just $ Path ps
+descend _ _ = Nothing
 
 findNodeByPath :: Path -> LambdaTerm -> Maybe LambdaTerm
 findNodeByPath (Path []) term = Just term
@@ -76,11 +90,49 @@ findFirstOutermostRedex a@Application { function = left, argument = right } =
   then Just root
   else
     case goLeftThen <$> findFirstOutermostRedex left of
-      p@Just{} -> p
+      p@Just {} -> p
       Nothing -> goRightThen <$> findFirstOutermostRedex right
 findFirstOutermostRedex Definition { value = right } =
   goRightThen <$> findFirstInnermostRedex right
 findFirstOutermostRedex _ = Nothing
+
+findInnermostUnboundOccurrence :: TermSet -> LambdaTerm -> Maybe Path
+findInnermostUnboundOccurrence = findInnermostUnboundOccurrence' []
+  where
+    findInnermostUnboundOccurrence' :: TermSet -> TermSet -> LambdaTerm -> Maybe Path
+    findInnermostUnboundOccurrence' bound searchSet t@(Lambda p right) =
+      compareIfNothing bound searchSet t $
+      goRightThen <$> findInnermostUnboundOccurrence' (Variable p:bound) searchSet right
+    findInnermostUnboundOccurrence' bound searchSet t@(Application left right) =
+      compareIfNothing bound searchSet t $
+      case goLeftThen <$> findInnermostUnboundOccurrence' bound searchSet left of
+        p@Just {} -> p
+        Nothing -> goRightThen <$> findInnermostUnboundOccurrence' bound searchSet right
+    findInnermostUnboundOccurrence' bound searchSet t@(Definition boundVar right) =
+      compareIfNothing bound searchSet t $
+      goRightThen <$> findInnermostUnboundOccurrence' (Variable boundVar:bound) searchSet right
+    findInnermostUnboundOccurrence' bound searchSet t =
+      compareIfNothing bound searchSet t Nothing
+    compareIfNothing :: TermSet -> TermSet -> LambdaTerm -> Maybe Path -> Maybe Path
+    compareIfNothing bound searchSet term Nothing =
+      if not (term `elem` bound) && (term `elem` searchSet) then Just root else Nothing
+    compareIfNothing _ _ _ p = p
+
+findOutermostUnboundOccurrence :: TermSet -> LambdaTerm -> Maybe Path
+findOutermostUnboundOccurrence = findOutermostUnboundOccurrence' []
+  where
+    findOutermostUnboundOccurrence' :: TermSet -> TermSet -> LambdaTerm -> Maybe Path
+    findOutermostUnboundOccurrence' bound searchSet term |
+      not (term `elem` bound) && (term `elem` searchSet) = Just root
+    findOutermostUnboundOccurrence' bound searchSet t@(Lambda p right) =
+      goRightThen <$> findOutermostUnboundOccurrence' (Variable p:bound) searchSet right
+    findOutermostUnboundOccurrence' bound searchSet t@(Application left right) =
+      case goLeftThen <$> findOutermostUnboundOccurrence' bound searchSet left of
+        p@Just {} -> p
+        Nothing -> goRightThen <$> findOutermostUnboundOccurrence' bound searchSet right
+    findOutermostUnboundOccurrence' bound searchSet t@(Definition boundVar right) =
+      goRightThen <$> findOutermostUnboundOccurrence' (Variable boundVar:bound) searchSet right
+    findOutermostUnboundOccurrence' _ _ _ = Nothing
 
 replaceByPath :: Path -> LambdaTerm -> LambdaTerm -> LambdaTerm
 replaceByPath (Path []) t _ = t

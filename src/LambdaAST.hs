@@ -5,6 +5,8 @@ module LambdaAST
 
     isRedex,
 
+    TermSet,
+
     LambdaTerm
     (
       Lambda,
@@ -24,6 +26,10 @@ where
 
 import Text.ParserCombinators.Parsec
 import qualified Data.Set as Set
+
+type IdentifierSet = Set.Set String
+
+type TermSet = [LambdaTerm]
 
 data LambdaTerm = Lambda { parameter :: String,
                            term :: LambdaTerm} |
@@ -55,21 +61,21 @@ generateUniqueId :: String -> LambdaTerm -> String
 generateUniqueId id ast = let (id', n) = splitIdentifier id in
                             generateId id' n (listVariables ast)
   where
-    generateId :: String -> Int -> Set.Set String -> String
+    generateId :: String -> Int -> IdentifierSet -> String
     generateId id n reserved =
       let id' = id ++ (show n) in
         if id' `Set.member` reserved
         then generateId id (succ n) reserved
         else id'
 
-listVariables :: LambdaTerm -> Set.Set String
+listVariables :: LambdaTerm -> IdentifierSet
 listVariables (Lambda param term) = Set.insert param (listVariables term)
 listVariables (Application function argument) =
   Set.union (listVariables function) (listVariables argument)
 listVariables (Variable var) = Set.insert var Set.empty
 listVariables (Definition name value) = (listVariables value)
 
-listParameters :: LambdaTerm -> Set.Set String
+listParameters :: LambdaTerm -> IdentifierSet
 listParameters (Lambda param term) = Set.insert param (listParameters term)
 listParameters  (Application function argument) =
   Set.union (listParameters function) (listParameters argument)
