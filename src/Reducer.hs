@@ -16,6 +16,7 @@ module Reducer
     strategy,
     table,
     defaultContext,
+    renderer,
 
     noDefs
   )
@@ -28,6 +29,7 @@ import LambdaAST
 import LambdaAST.Path
 import Reducer.DefinitionTable
 import Reducer.Step
+import Reducer.Renderer
 
 data EvaluationOrder =
   EvaluationOrder { findRedex :: LambdaTerm -> Maybe Path,
@@ -38,7 +40,8 @@ data Strategy = Strategy { pass :: Passing,
                            evalOrder :: EvaluationOrder }
 
 data Context = Context { strategy :: Strategy,
-                         table :: DefinitionTable }
+                         table :: DefinitionTable,
+                         renderer :: RendererSpec }
 
 findNextRedex = findRedex . evalOrder
 
@@ -54,7 +57,8 @@ applicativeOrder = EvaluationOrder {
 defaultStrategy = Strategy { pass = ByName, evalOrder = normalOrder }
 
 defaultContext = Context { strategy = defaultStrategy,
-                           table = noDefs }
+                           table = noDefs,
+                           renderer = clRendererSpec }
 
 betaReduce :: Strategy -> LambdaTerm -> ReductionStep
 betaReduce s@Strategy {} t =

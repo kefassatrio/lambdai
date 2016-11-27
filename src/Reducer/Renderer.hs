@@ -3,7 +3,8 @@ module Reducer.Renderer
     render,
 
     RendererSpec (RendererSpec),
-    clRendererSpec
+    clRendererSpec,
+    latexRendererSpec
   )
 where
 
@@ -29,7 +30,9 @@ data RendererSpec = RendererSpec { therefore :: String,
                                    period :: String,
                                    application :: String,
                                    definition :: String,
-                                   alignStep :: String -> String }
+                                   alignStep :: String -> String,
+                                   start :: String,
+                                   end :: String }
 
 consoleWidth = 80
 
@@ -49,25 +52,50 @@ clRendererSpec = RendererSpec
     period = ".",
     application = " ",
     definition = " = ",
-    alignStep = alignStep
+    alignStep = alignStep,
+    start = "",
+    end = ""
   }
   where
     alignStep :: String -> String
     alignStep s | '\x1B' `elem` s = alignLeft (consoleWidth + 3) s ++ " "
                 | otherwise = alignLeft (consoleWidth - 5) s ++ " "
 
+latexRendererSpec = RendererSpec
+  {
+    therefore = "&\\quad \\therefore ",
+    beta = "\\beta ",
+    delta = "\\delta ",
+    lambda = "\\lambda ",
+    firstLinePrefix = "&",
+    linePrefix = "=\\;&",
+    lineEnd = "\\\\\n",
+    underlineBegin = "\\underline{",
+    underlineEnd = "}",
+    openParen = "(",
+    closeParen = ")",
+    period = ".",
+    application = "\\;",
+    definition = " = ",
+    alignStep = id,
+    start = "\\begin{aligned}\n",
+    end = "\\end{aligned}\n"
+  }
+
 render :: RendererSpec -> Renderer
 render s (Trace init []) =
-  renderTerm s init
+  start s ++ firstLinePrefix s ++
+  renderTerm s init ++ lineEnd s ++ end s
 render s (Trace init (step:steps)) =
-  firstLinePrefix s ++
+  start s ++ firstLinePrefix s ++
   renderTermWithHighlight (Just $ path step) s init ++
   lineEnd s ++
-  renderSteps s (reductionType s step) (Trace (newTerm step) steps)
+  renderSteps s (reductionType s step) (Trace (newTerm step) steps) ++
+  end s
 
 renderSteps :: RendererSpec -> String -> Trace -> String
 renderSteps s rt (Trace init []) =
-  linePrefix s ++ renderStep s rt init (NoReduction init)
+  linePrefix s ++ renderStep s rt init (NoReduction init) ++ lineEnd s
 renderSteps s rt (Trace init (step:steps)) =
   linePrefix s ++ renderStep s rt init step ++ lineEnd s ++
   renderSteps s (reductionType s step) (Trace (newTerm step) steps)

@@ -31,6 +31,10 @@ setPragma Pragma { pragmaOption = "evalOrder", pragmaValue = value }
   case value of
     "normal" -> return c { strategy = s { evalOrder = normalOrder } }
     "applicative" -> return c { strategy = s { evalOrder = applicativeOrder } }
+setPragma Pragma { pragmaOption = "render", pragmaValue = value } c =
+  case value of
+    "cl" -> return c { renderer = clRendererSpec }
+    "latex" -> return c { renderer = latexRendererSpec }
 setPragma Pragma { pragmaOption = "load", pragmaValue = path } c =
   do contents <- readFile path
      foldM evalLine c $ lines contents
@@ -51,7 +55,7 @@ evalLine context line | isEmptyLine line || isCommentLine line = return context
                           Right term ->
                             let (table', trace) =
                                   reduceToNormalForm (strategy context) (table context) term in
-                              (putStrLn $ render clRendererSpec trace) >> return context { table = table' }
+                              (putStr $ render (renderer context) trace) >> return context { table = table' }
 
 isEmptyLine :: String -> Bool
 isEmptyLine [] = True
