@@ -92,11 +92,16 @@ renderTermWithHighlight p s (Lambda parameter term) =
   openParen s ++ lambda s ++ parameter ++ period s ++
   renderTermWithHighlight (descend p Right) s term ++ closeParen s
 renderTermWithHighlight p s (Application function argument) =
-  openParen s ++ renderTermWithHighlight (descend p Left) s function ++ application s ++
-  renderTermWithHighlight (descend p Right) s argument ++ closeParen s
+  inParensIfNecessary (descend p Left) s Left function ++ application s ++
+  inParensIfNecessary (descend p Right) s Right argument
 renderTermWithHighlight p s (Variable var) = var
 renderTermWithHighlight p s (Definition name value) = name ++ definition s ++
   renderTermWithHighlight (descend p Right) s value
+
+inParensIfNecessary :: Maybe Path -> RendererSpec -> Branch -> LambdaTerm -> String
+inParensIfNecessary p s Left t = renderTermWithHighlight p s t
+inParensIfNecessary p s Right t@Application {} = openParen s ++ renderTermWithHighlight p s t ++ closeParen s
+inParensIfNecessary p s Right t = renderTermWithHighlight p s t
 
 alignLeft :: Int -> String -> String
 alignLeft n s = s ++ replicate (n - (length s)) ' '
