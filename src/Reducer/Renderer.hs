@@ -32,7 +32,8 @@ data RendererSpec = RendererSpec { therefore :: String,
                                    definition :: String,
                                    alignStep :: String -> String,
                                    start :: String,
-                                   end :: String }
+                                   end :: String,
+                                   timeout :: String }
 
 consoleWidth = 80
 
@@ -54,7 +55,8 @@ clRendererSpec = RendererSpec
     definition = " = ",
     alignStep = alignStep,
     start = "",
-    end = ""
+    end = "",
+    timeout = "..."
   }
   where
     alignStep :: String -> String
@@ -79,7 +81,8 @@ latexRendererSpec = RendererSpec
     definition = " = ",
     alignStep = id,
     start = "\\begin{aligned}\n",
-    end = "\\end{aligned}\n"
+    end = "\\end{aligned}\n",
+    timeout = "\\ldots"
   }
 
 render :: RendererSpec -> Renderer
@@ -96,6 +99,7 @@ render s (Trace init (step:steps)) =
 renderSteps :: RendererSpec -> String -> Trace -> String
 renderSteps s rt (Trace init []) =
   linePrefix s ++ renderStep s rt init (NoReduction init) ++ lineEnd s
+renderSteps s rt (Trace _ (Timeout:_)) = linePrefix s ++ (alignStep s $ timeout s) ++ lineEnd s
 renderSteps s rt (Trace init (step:steps)) =
   linePrefix s ++ renderStep s rt init step ++ lineEnd s ++
   renderSteps s (reductionType s step) (Trace (newTerm step) steps)

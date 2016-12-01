@@ -1,18 +1,9 @@
 module Reducer.Step
   (
-    ReductionStep
-    (
-      Beta,
-      Delta,
-      NoReduction
-    ),
-    path,
-    newTerm,
-    reducible,
+    ReductionStep(..),
+    Trace (..),
 
-    Trace (Trace),
-    initialForm,
-    steps
+    reducible
   )
 where
 
@@ -21,7 +12,8 @@ import LambdaAST.Path
 
 data ReductionStep = Beta { path :: Path, newTerm :: LambdaTerm } |
                      Delta { path :: Path, newTerm :: LambdaTerm } |
-                     NoReduction { newTerm :: LambdaTerm }
+                     NoReduction { newTerm :: LambdaTerm } |
+                     Timeout
   deriving Show
 
 data Trace = Trace { initialForm :: LambdaTerm,

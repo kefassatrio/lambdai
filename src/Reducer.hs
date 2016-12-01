@@ -1,22 +1,18 @@
 module Reducer
   (
     reduceToNormalForm,
+    limitSteps,
 
-    Strategy (Strategy),
-    pass,
-    evalOrder,
+    Strategy (..),
 
-    EvaluationOrder (EvaluationOrder),
+    EvaluationOrder (..),
     normalOrder,
     applicativeOrder,
 
-    Passing (ByName, ByValue),
+    Passing (..),
 
-    Context (Context),
-    strategy,
-    table,
+    Context (..),
     defaultContext,
-    renderer,
 
     noDefs
   )
@@ -41,7 +37,8 @@ data Strategy = Strategy { pass :: Passing,
 
 data Context = Context { strategy :: Strategy,
                          table :: DefinitionTable,
-                         renderer :: RendererSpec }
+                         renderer :: RendererSpec,
+                         evalStepLimit :: Int }
 
 findNextRedex = findRedex . evalOrder
 
@@ -58,7 +55,8 @@ defaultStrategy = Strategy { pass = ByName, evalOrder = normalOrder }
 
 defaultContext = Context { strategy = defaultStrategy,
                            table = noDefs,
-                           renderer = clRendererSpec }
+                           renderer = clRendererSpec,
+                           evalStepLimit = 0 }
 
 betaReduce :: Strategy -> LambdaTerm -> ReductionStep
 betaReduce s@Strategy {} t =
@@ -100,3 +98,12 @@ reduceToNormalForm s d t = (d, Trace t $ takeWhile reducible (trace t))
     trace t =
       let step = reduce s d t in
         step:(trace $ newTerm step)
+
+limitSteps :: Int -> Trace -> Trace
+limitSteps 0 t = t
+limitSteps n t = t { steps =
+                       let s' = take n $ steps t
+                           l = length $ s' in
+                         if l < n
+                         then s'
+                         else s' ++ [Timeout] }

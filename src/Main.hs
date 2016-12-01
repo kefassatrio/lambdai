@@ -35,6 +35,8 @@ setPragma Pragma { pragmaOption = "render", pragmaValue = value } c =
   case value of
     "cl" -> return c { renderer = clRendererSpec }
     "latex" -> return c { renderer = latexRendererSpec }
+setPragma Pragma { pragmaOption = "maxSteps", pragmaValue = value} c =
+  return c { evalStepLimit = read value :: Int }
 setPragma Pragma { pragmaOption = "load", pragmaValue = path } c =
   do contents <- readFile path
      foldM evalLine c $ lines contents
@@ -55,7 +57,10 @@ evalLine context line | isEmptyLine line || isCommentLine line = return context
                           Right term ->
                             let (table', trace) =
                                   reduceToNormalForm (strategy context) (table context) term in
-                              (putStr $ render (renderer context) trace) >> return context { table = table' }
+                              (putStr $
+                                render (renderer context)
+                                (limitSteps (evalStepLimit context) trace))
+                              >> return context { table = table' }
 
 isEmptyLine :: String -> Bool
 isEmptyLine [] = True
