@@ -1,0 +1,8 @@
+# -*- org -*-
+#+TITLE: Roadmap
+
+* V 2.0.0.0
+  - Web frontend
+  - Request timeout
+  - Standard library
+  - Option to hide traces
