@@ -6,21 +6,10 @@ module LambdaAST
     isRedex,
 
     TermSet,
+    emptyTermSet,
+    addTerm,
 
-    LambdaTerm
-    (
-      Lambda,
-      Application,
-      Variable,
-      Definition
-    ),
-    parameter,
-    term,
-    function,
-    argument,
-    var,
-    name,
-    value
+    LambdaTerm(..)
   )
 where
 
@@ -30,6 +19,11 @@ import qualified Data.Set as Set
 type IdentifierSet = Set.Set String
 
 type TermSet = [LambdaTerm]
+
+emptyTermSet = []
+
+addTerm :: LambdaTerm -> TermSet -> TermSet
+addTerm t ts = t:ts
 
 data LambdaTerm = Lambda { parameter :: String,
                            term :: LambdaTerm} |

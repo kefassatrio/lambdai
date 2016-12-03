@@ -1,32 +1,36 @@
+{-# LANGUAGE LambdaCase #-}
 module LambdaAST.Path
   (
     findNodeByPath,
-
-    findFirstInnermostRedex,
-    findFirstOutermostRedex,
-
-    findInnermostUnboundOccurrence,
-    findOutermostUnboundOccurrence,
-
     replaceByPath,
 
-    Branch (Left, Right),
-    Path (Path),
+    TraversalOrder,
+    outermostFirst,
+    innermostFirst,
+    outermostFirstNoLambda,
+    innermostFirstNoLambda,
+
+    findRedex,
+    findFreeOccurrence,
+
+    Branch (..),
+    Path (..),
     descend,
     root
   )
 where
 
-import Prelude hiding (Left, Right)
+import Prelude hiding (Left, Right, traverse)
 import Data.Functor
+import Data.Maybe
 
 import LambdaAST
 
 data Branch = Left | Right
-  deriving Show
+  deriving (Show, Eq)
 
 newtype Path = Path [Branch]
-  deriving Show
+  deriving (Show, Eq)
 
 root = Path []
 
@@ -37,11 +41,20 @@ instance Monoid Path where
 (<:>) :: Branch -> Path -> Path
 (<:>) b (Path p) = Path (b:p)
 
+(<|>) :: Maybe a -> Maybe a -> Maybe a
+(<|>) a b = if isJust a then a else b
+
 goRightThen :: Path -> Path
 goRightThen p = Right <:> p
 
 goLeftThen :: Path -> Path
 goLeftThen p = Left <:> p
+
+goRight :: Path -> Path
+goRight (Path p) = Path $ p ++ [Right]
+
+goLeft :: Path -> Path
+goLeft (Path p) = Path $ p ++ [Left]
 
 descend :: Maybe Path -> Branch -> Maybe Path
 descend (Just (Path (Right:ps))) Right = Just $ Path ps
@@ -68,71 +81,93 @@ findNode n h = findNodeInSubTree [] n h
     findNodeInSubTree p n Definition { value = right } =
       findNodeInSubTree (p ++ [Right]) n right
 
-findFirstInnermostRedex :: LambdaTerm -> Maybe Path
-findFirstInnermostRedex Lambda { term = right } =
-  goRightThen <$> findFirstInnermostRedex right
-findFirstInnermostRedex a@Application { function = left, argument = right } =
-  case goLeftThen <$> findFirstInnermostRedex left of
-    p@Just {} -> p
-    Nothing ->
-      case goRightThen <$> findFirstInnermostRedex right of
-        p@Just {} -> p
-        Nothing -> if isRedex a then Just root else Nothing
-findFirstInnermostRedex Definition { value = right } =
-  goRightThen <$> findFirstInnermostRedex right
-findFirstInnermostRedex _ = Nothing
+data Cursor = Cursor { path :: Path,
+                       subTerm :: LambdaTerm,
+                       bound :: TermSet } |
+              CursorEnd
+  deriving Eq
 
-findFirstOutermostRedex :: LambdaTerm -> Maybe Path
-findFirstOutermostRedex Lambda { term = right } =
-  goRightThen <$> findFirstInnermostRedex right
-findFirstOutermostRedex a@Application { function = left, argument = right } =
-  if isRedex a
-  then Just root
-  else
-    case goLeftThen <$> findFirstOutermostRedex left of
-      p@Just {} -> p
-      Nothing -> goRightThen <$> findFirstOutermostRedex right
-findFirstOutermostRedex Definition { value = right } =
-  goRightThen <$> findFirstInnermostRedex right
-findFirstOutermostRedex _ = Nothing
+rootCursor :: LambdaTerm -> Cursor
+rootCursor term = Cursor root term emptyTermSet
 
-findInnermostUnboundOccurrence :: TermSet -> LambdaTerm -> Maybe Path
-findInnermostUnboundOccurrence = findInnermostUnboundOccurrence' []
+type PathSelector = (Cursor -> Cursor)
+
+type TraversalOrder = [PathSelector]
+
+right :: PathSelector
+right = pathRight . termRight
   where
-    findInnermostUnboundOccurrence' :: TermSet -> TermSet -> LambdaTerm -> Maybe Path
-    findInnermostUnboundOccurrence' bound searchSet t@(Lambda p right) =
-      compareIfNothing bound searchSet t $
-      goRightThen <$> findInnermostUnboundOccurrence' (Variable p:bound) searchSet right
-    findInnermostUnboundOccurrence' bound searchSet t@(Application left right) =
-      compareIfNothing bound searchSet t $
-      case goLeftThen <$> findInnermostUnboundOccurrence' bound searchSet left of
-        p@Just {} -> p
-        Nothing -> goRightThen <$> findInnermostUnboundOccurrence' bound searchSet right
-    findInnermostUnboundOccurrence' bound searchSet t@(Definition boundVar right) =
-      compareIfNothing bound searchSet t $
-      goRightThen <$> findInnermostUnboundOccurrence' (Variable boundVar:bound) searchSet right
-    findInnermostUnboundOccurrence' bound searchSet t =
-      compareIfNothing bound searchSet t Nothing
-    compareIfNothing :: TermSet -> TermSet -> LambdaTerm -> Maybe Path -> Maybe Path
-    compareIfNothing bound searchSet term Nothing =
-      if not (term `elem` bound) && (term `elem` searchSet) then Just root else Nothing
-    compareIfNothing _ _ _ p = p
+    pathRight = \case
+      c@Cursor { path = path } -> c { path = goRight path }
+      _ -> CursorEnd
+    termRight = \case
+      c@Cursor { subTerm = Lambda p right, bound = bound } ->
+        c { subTerm = right, bound = addTerm (Variable p) bound }
+      c@Cursor { subTerm = Application _ right } ->
+        c { subTerm = right }
+      c@Cursor { subTerm = Definition name right, bound = bound } ->
+        c { subTerm = right, bound = addTerm (Variable name) bound }
+      _ -> CursorEnd
 
-findOutermostUnboundOccurrence :: TermSet -> LambdaTerm -> Maybe Path
-findOutermostUnboundOccurrence = findOutermostUnboundOccurrence' []
+left :: PathSelector
+left = pathLeft . termLeft
   where
-    findOutermostUnboundOccurrence' :: TermSet -> TermSet -> LambdaTerm -> Maybe Path
-    findOutermostUnboundOccurrence' bound searchSet term |
-      not (term `elem` bound) && (term `elem` searchSet) = Just root
-    findOutermostUnboundOccurrence' bound searchSet t@(Lambda p right) =
-      goRightThen <$> findOutermostUnboundOccurrence' (Variable p:bound) searchSet right
-    findOutermostUnboundOccurrence' bound searchSet t@(Application left right) =
-      case goLeftThen <$> findOutermostUnboundOccurrence' bound searchSet left of
-        p@Just {} -> p
-        Nothing -> goRightThen <$> findOutermostUnboundOccurrence' bound searchSet right
-    findOutermostUnboundOccurrence' bound searchSet t@(Definition boundVar right) =
-      goRightThen <$> findOutermostUnboundOccurrence' (Variable boundVar:bound) searchSet right
-    findOutermostUnboundOccurrence' _ _ _ = Nothing
+    pathLeft = \case
+      c@Cursor { path = path } -> c { path = goLeft path }
+      _ -> CursorEnd
+    termLeft = \case
+      c@Cursor { subTerm = Application left _ } -> c { subTerm = left }
+      _ -> CursorEnd
+
+rightNoLambda :: PathSelector
+rightNoLambda = \case
+  c@Cursor { subTerm = Lambda {} } -> CursorEnd
+  c -> right c
+
+self :: PathSelector
+self = id
+
+outermostFirst :: TraversalOrder
+outermostFirst = [self, left, right]
+
+innermostFirst :: TraversalOrder
+innermostFirst = [left, right, self]
+
+outermostFirstNoLambda :: TraversalOrder
+outermostFirstNoLambda = [self, left, rightNoLambda]
+
+innermostFirstNoLambda :: TraversalOrder
+innermostFirstNoLambda = [left, rightNoLambda, self]
+
+traverse :: TraversalOrder -> (Cursor -> Maybe a) -> LambdaTerm -> Maybe a
+traverse selectors f t = traverse' selectors f $ rootCursor t
+  where
+    traverse' :: TraversalOrder -> (Cursor -> Maybe a) -> Cursor -> Maybe a
+    traverse' _ _ CursorEnd = Nothing
+    traverse' (s:[]) f c = let c' = s c in
+      (f $ c') <|> traverseIfNotEqual f c c'
+    traverse' (s:ss) f c = let c' = s c in
+      (f $ c')
+      <|> traverseIfNotEqual f c c'
+      <|> traverse' ss f c
+    traverseIfNotEqual f p c = (if p /= c then traverse' selectors f c else Nothing)
+
+find :: TraversalOrder -> (Cursor -> Bool) -> LambdaTerm -> Maybe Path
+find to p =
+  traverse to (\c -> if p c then Just (path c) else Nothing)
+
+findRedex :: TraversalOrder -> LambdaTerm -> Maybe Path
+findRedex to = find to cursorIsRedex
+  where
+    cursorIsRedex c@Cursor { subTerm = term } = isRedex term
+    cursorIsRedex CursorEnd = False
+
+findFreeOccurrence :: TraversalOrder -> TermSet -> LambdaTerm -> Maybe Path
+findFreeOccurrence to searchSet = find to occurrence
+  where
+    occurrence c@Cursor { subTerm = term, bound = bound } =
+      not (term `elem` bound) && term `elem` searchSet
+    occurrence CursorEnd = False
 
 replaceByPath :: Path -> LambdaTerm -> LambdaTerm -> LambdaTerm
 replaceByPath (Path []) t _ = t

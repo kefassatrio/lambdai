@@ -5,9 +5,10 @@ module Reducer
 
     Strategy (..),
 
-    EvaluationOrder (..),
     normalOrder,
     applicativeOrder,
+    callByName,
+    callByValue,
 
     Passing (..),
 
@@ -27,31 +28,22 @@ import Reducer.DefinitionTable
 import Reducer.Step
 import Reducer.Renderer
 
-data EvaluationOrder =
-  EvaluationOrder { findRedex :: LambdaTerm -> Maybe Path,
-                    findUnboundOcc :: TermSet -> LambdaTerm -> Maybe Path}
 data Passing = ByName | ByValue
 
-data Strategy = Strategy { pass :: Passing,
-                           evalOrder :: EvaluationOrder }
+type Strategy = TraversalOrder
 
 data Context = Context { strategy :: Strategy,
                          table :: DefinitionTable,
                          renderer :: RendererSpec,
                          evalStepLimit :: Int }
 
-findNextRedex = findRedex . evalOrder
+normalOrder = outermostFirst
+applicativeOrder = innermostFirst
+callByName = outermostFirstNoLambda
+callByValue = innermostFirstNoLambda
 
-findNextUnboundOcc = findUnboundOcc . evalOrder
 
-normalOrder = EvaluationOrder {
-  findRedex = findFirstOutermostRedex,
-  findUnboundOcc = findOutermostUnboundOccurrence }
-applicativeOrder = EvaluationOrder {
-  findRedex = findFirstInnermostRedex,
-  findUnboundOcc = findInnermostUnboundOccurrence }
-
-defaultStrategy = Strategy { pass = ByName, evalOrder = normalOrder }
+defaultStrategy = normalOrder
 
 defaultContext = Context { strategy = defaultStrategy,
                            table = noDefs,
@@ -59,27 +51,21 @@ defaultContext = Context { strategy = defaultStrategy,
                            evalStepLimit = 0 }
 
 betaReduce :: Strategy -> LambdaTerm -> ReductionStep
-betaReduce s@Strategy {} t =
-  case findNextRedex s t of
+betaReduce s t =
+  case findRedex s t of
     Nothing -> NoReduction t
     Just p ->
       let Just a = findNodeByPath p t
-          step = (lambdaApply s p a) in
+          step = (lambdaApply p a) in
         Beta (path step) $ replaceByPath (path step) (newTerm step) t
 
-lambdaApply :: Strategy -> Path -> LambdaTerm -> ReductionStep
-lambdaApply Strategy { pass = ByName } p (Application (Lambda parameter term) argument) =
+lambdaApply :: Path -> LambdaTerm -> ReductionStep
+lambdaApply p (Application (Lambda parameter term) argument) =
   Beta p $ replaceWithSubtree parameter argument term
-lambdaApply s@Strategy { pass = ByValue } p
-  (Application (Lambda parameter term) argument) =
-  case findNextRedex s argument of
-    Nothing -> Beta p $ replaceWithSubtree parameter argument term
-    Just _ -> let step = betaReduce s argument in
-                Beta (p <> path step) (newTerm step)
-lambdaApply _ _ _ = undefined
+lambdaApply _ _ = undefined
 
 deltaReduce :: Strategy -> DefinitionTable -> LambdaTerm -> ReductionStep
-deltaReduce s d t = case findNextUnboundOcc s (keySet d) t of
+deltaReduce s d t = case findFreeOccurrence s (keySet d) t of
                       Nothing -> NoReduction t
                       Just p ->
                         let Just key = (findNodeByPath p t)

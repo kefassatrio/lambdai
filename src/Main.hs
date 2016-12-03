@@ -21,20 +21,19 @@ repl t =
        else getLine >>= evalLine t >>= repl
 
 setPragma :: Pragma -> Context -> IO Context
-setPragma Pragma { pragmaOption = "passBy", pragmaValue = value }
+setPragma Pragma { pragmaOption = "strategy", pragmaValue = value }
   c@Context { strategy = s } =
   case value of
-    "name" -> return c { strategy = s { pass = ByName } }
-    "value" -> return c { strategy = s { pass = ByValue} }
-setPragma Pragma { pragmaOption = "evalOrder", pragmaValue = value }
-  c@Context { strategy = s } =
-  case value of
-    "normal" -> return c { strategy = s { evalOrder = normalOrder } }
-    "applicative" -> return c { strategy = s { evalOrder = applicativeOrder } }
+    "normalOrder" -> return c { strategy = normalOrder }
+    "applicativeOrder" -> return c { strategy = applicativeOrder }
+    "callByName" -> return c { strategy = callByName }
+    "callByValue" -> return c { strategy = callByValue }
+    _ -> putStrLn "No such strategy." >> return c
 setPragma Pragma { pragmaOption = "render", pragmaValue = value } c =
   case value of
     "cl" -> return c { renderer = clRendererSpec }
     "latex" -> return c { renderer = latexRendererSpec }
+    _ -> putStrLn "No such renderer." >> return c
 setPragma Pragma { pragmaOption = "maxSteps", pragmaValue = value} c =
   return c { evalStepLimit = read value :: Int }
 setPragma Pragma { pragmaOption = "load", pragmaValue = path } c =
