@@ -1,0 +1,35 @@
+$doctype 5
+<html>
+  <head>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_SVG">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href="res/main.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
+    <title>
+      Lambda Interpreter
+  <body>
+    <div class="flex">
+      <h1>Lambda Interpreter
+      <div>
+        <form method="post" action="/" accept-charset="utf8">
+          <div>
+            <textarea name="src">
+              $forall line <- inputLines
+                #{line}
+          <div>
+            <label for="stepLimit">
+              <span>Max. reductions:
+              <input name="stepLimit" type="text" value="#{stepLimit}">
+          <div>
+            <label for="strategy">
+              <span>Evaluation strategy:
+              <select name="strategy">
+                <option>normal order
+                <option>applicative order
+                <option>call by name
+                <option>call by value
+          <div class="actions">
+            <input type="submit" value="Eval">
+      <div>
+        $forall line <- output
+          #{line}

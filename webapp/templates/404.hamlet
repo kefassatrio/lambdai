@@ -1,0 +1,8 @@
+$doctype 5
+<html>
+  <head>
+    <title>
+      Resource not found
+  <body>
+    <h1>Resource not found
+    <p>#{x}

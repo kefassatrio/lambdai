@@ -29,6 +29,7 @@ lambdaAbstraction =
   do char 'λ' <|> char '\\'
      x <- variable
      char '.'
+     spaces
      term <- lambdaTerm
      return $ Lambda (var x) term
 

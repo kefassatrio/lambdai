@@ -1,0 +1,8 @@
+$doctype 5
+<html>
+  <head>
+    <title>
+      Invalid method
+  <body>
+    <h1>Invalid method
+    <p>#{x}
