@@ -10,72 +10,79 @@ to the user.
 This application is designed for educational purposes.
 
 * Installation
-  This package uses Cabal.[fn:1] Therefore you can use the following
-  commands in the root of the source tree.
+  This package uses Stack as build system. Therefore you can use the
+  following command in the root of the source tree.
 
   #+BEGIN_SRC sh
-    cabal configure
-    cabal build
-    cabal install
+    stack install
   #+END_SRC
 
 * Usage
-  Invoke by the use of ~cabal run~ in the root of the source tree or
-  ~lambdai~ if the package is installed.
+  Invoke by the use of ~stack exec lambdai~ or ~stack exec lambdaid~
+  respectively in the root of the source tree or ~lambdai~ ord
+  ~lambdaid~ respectively if the package is installed.
 
-** Evaluation Order
-   This package implements two evaluation orders: /normal order/
-   (outermost left first) and /applicative order/ (innermost left
-   first). Of which the default evaluation order is the /normal
-   order/.
+** λi Daemon
+   The λi daemon (~lambdaid~) runs on port 3000 by default. Each
+   request is handled as a separate λi session. The reductions
+   performed on the server are limited to 3000. The output is rendered
+   using MathJax.
 
-   The evaluation order can be changed by using the ~:evalOrder~
-   directive.
+** Evaluation Strategies
+   λi supports the following four distinct evaluation strategies out
+   of the box. All four have in common, that they always prefer
+   β-reductions over δ-reductions. This means δ-reductions are only
+   performed if no further β-reductions are possible, given a certain
+   evaluation order. When using pass by name or pass by value, terms
+   are only reduced until they are in HNF (head normal
+   form). Therefore even if β-reductions inside a lambda abstraction
+   are still possible, δ-reductions outside the outermost lambda
+   abstraction are performed, because these evaluation strategies
+   don't allow any furhter β-reductions in such a term.
 
-   Change to /normal order/:
+   - normal order :: Does reductions on leftmost outermost subterms
+        first. This strategy always finds a NF (normal form) if it
+        exists.
+   - applicative order :: Does reductions on the leftmost innermost
+        subterms first. This strategy may not find a NF even if it
+        exists, but requires fewer steps than normal order evaluation
+        in certain situations.
+   - pass by name :: The same as normal order, except that no
+        reductions inside of lambda abstractions are performed. This
+        always finds a HNF if it exists.
+   - pass by value :: The same as applicative order, except that no
+        reductions inside of lambda abstractions are performed. This
+        doesn't always find a HNF if it exists.
 
-    #+BEGIN_SRC text
-      :render normal
-    #+END_SRC
+   In /lambdai/ one may use the ~:strategy <strategy>~ directive to
+   change the evaluation strategy interactively.
 
-   Change to /applicative order/:
+   #+BEGIN_SRC text
+     <strategy> ::= normalOrder | applicativeOrder | callByName |
+      		    callByValue
+   #+END_SRC
+   
+   In /lambdaid/ the evaluation strategy may be changed using the
+   respective selection box.
 
-    #+BEGIN_SRC text
-      :render applicative
-    #+END_SRC
+** Evaluation Step Limit
+   The maximum of reductions to be performed by λi may be limited in
+   an interactive command line session and are always limited when
+   using the web interface.
 
-** Argument Passing
-   Two argument passing strategies are supported. If arguments are
-   /passed by value/ they are evaluated before the function is applied
-   to them. If they're /passed by label/ they aren't evaluated before
-   application.
+   If the maximum of reductions is set to zero, an infinite amount of
+   reductions are performed.
 
-   In this package this is implemented so that the arguments are
-   reduced only by the use of β-reductions until no further possible,
-   before the function is applied to them, if /pass by value/ is
-   selected.
+   On the command line the ~:maxSteps <unsigned integer>~ directive
+   may be used to change this limit.
 
-   The default argument passing strategy is /pass by name/.
-
-   Change to /pass by name/:
-
-    #+BEGIN_SRC text
-      :passBy name
-    #+END_SRC
-
-   Change to /pass by value/:
-
-    #+BEGIN_SRC text
-      :passBy value
-    #+END_SRC
-
-** Output
+** Output (command line)
    The two different modes for rendering reduction traces are
    described below.
 
 *** Terminal
     Terminal (or command line) is the default output mode. To change
-    the output mode to /terminal/ use:
+    the output mode to /command line/ use:
 
     #+BEGIN_SRC text
       :render cl
@@ -136,6 +143,3 @@ This application is designed for educational purposes.
     λ> 
   #+END_SRC
 
-* Footnotes
-
-[fn:1] https://www.haskell.org/cabal/
