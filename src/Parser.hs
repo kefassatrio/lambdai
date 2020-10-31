@@ -47,8 +47,15 @@ lambdaTermNoApp =   (char '(' >> lambdaTerm >>= (\lt -> char ')' >> return lt))
                 <|> variable
 
 lambdaRead :: String -> Either ParseError LambdaTerm
-lambdaRead s = parse (topLevelLambdaTerm >>= (\term -> eof >> return term)) "" (replaceNumerals(s))
+lambdaRead s = parse (topLevelLambdaTerm >>= (\term -> eof >> return term)) "" (replaceNumerals(formatForMultiplication s ""))
 
+formatForMultiplication :: [Char] -> [Char] -> [Char]
+formatForMultiplication [] result = result
+formatForMultiplication (s:xs) result = if isMultiplication s then (formatForMultiplication xs ([s] ++ result)) else (formatForMultiplication xs (result ++ [s]))
+
+isMultiplication :: Char -> Bool
+isMultiplication '*' = True
+isMultiplication c = False
 
 replaceNumerals :: String -> String
 replaceNumerals (s:xs) = replaceNumeral (s) ++ replaceNumerals (xs)
