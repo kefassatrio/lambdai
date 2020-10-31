@@ -1,6 +1,6 @@
-# -*- org -*-
 
-#+TITLE: Tugas 5 - Church's Numeral Interpretation
+Tugas 5 - Church's Numeral Interpretation
+======
 ** Penjelasan Kefas:
   Modifikasi yang saya buat dapat dilihat dalam file ~src/Parser.hs~ dan 
   ~src/Reducer/Renderer.hs~ (perbedaan dapat dilihat dari commit saya).
@@ -44,7 +44,8 @@
   tercantum di bagian bawah ini (README dari repo original).
 
 
-#+TITLE: lambdai — Untyped Lambda Calculus Interpreter
+lambdai — Untyped Lambda Calculus Interpreter
+======
 
 This application tries to reduce arbitrary lambda terms to their
 normal form using either normal oder applicative order. δ- as well as
