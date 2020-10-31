@@ -13,6 +13,7 @@ import Prelude hiding (Left, Right)
 import LambdaAST
 import LambdaAST.Path
 import Reducer.Step
+import Data.Maybe
 
 type Renderer = Trace -> String
 
@@ -106,9 +107,17 @@ renderSteps s rt (Trace init (step:steps)) =
 
 renderStep :: RendererSpec -> String -> LambdaTerm -> ReductionStep -> String
 renderStep s rt t NoReduction {} =
-  (alignStep s $ renderTerm s t) ++ therefore s ++ rt
+  if (isJust (toNumber t)) then (show (fromJust (toNumber t))) else ((alignStep s $ renderTerm s t) ++ therefore s ++ rt)
 renderStep s rt t step =
   (alignStep s $ renderTermWithHighlight (Just $ path step) s t) ++ therefore s ++ rt
+
+toNumber (Lambda parameter' term') = go (term (term'))
+    where
+        go (Variable x) | x == (parameter (term')) = Just 0
+        go (Application (Variable f) e) | f == parameter' = (+ 1) <$> go e
+        go _ = Nothing
+
+toNumber _ = Nothing
 
 reductionType :: RendererSpec -> ReductionStep -> String
 reductionType s Beta {} = beta s

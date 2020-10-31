@@ -47,4 +47,25 @@ lambdaTermNoApp =   (char '(' >> lambdaTerm >>= (\lt -> char ')' >> return lt))
                 <|> variable
 
 lambdaRead :: String -> Either ParseError LambdaTerm
-lambdaRead s = parse (topLevelLambdaTerm >>= (\term -> eof >> return term)) "" s
+lambdaRead s = parse (topLevelLambdaTerm >>= (\term -> eof >> return term)) "" (replaceNumerals(s))
+
+
+replaceNumerals :: String -> String
+replaceNumerals (s:xs) = replaceNumeral (s) ++ replaceNumerals (xs)
+replaceNumerals [] = []
+
+replaceNumeral :: Char -> String
+replaceNumeral '0' = "(\\s.(\\z.z))"
+replaceNumeral '1' = "(\\s.(\\z.s(z)))"
+replaceNumeral '2' = "(\\s.(\\z.s(s(z))))"
+replaceNumeral '3' = "(\\s.(\\z.s(s(s(z)))))"
+replaceNumeral '4' = "(\\s.(\\z.s(s(s(s(z))))))"
+replaceNumeral '5' = "(\\s.(\\z.s(s(s(s(s(z)))))))"
+replaceNumeral '6' = "(\\s.(\\z.s(s(s(s(s(s(z))))))))"
+replaceNumeral '7' = "(\\s.(\\z.s(s(s(s(s(s(s(z)))))))))"
+replaceNumeral '8' = "(\\s.(\\z.s(s(s(s(s(s(s(s(z))))))))))"
+replaceNumeral '9' = "(\\s.(\\z.s(s(s(s(s(s(s(s(s(z)))))))))))"
+replaceNumeral '+' = "(\\w.(\\y.(\\x.(y((w y)x)))))"
+replaceNumeral '+' = "(\\w.(\\y.(\\x.(y((w y)x)))))"
+replaceNumeral '*' = "(\\x.(\\y.(\\z.(x(y z)))))"
+replaceNumeral c = [c]
