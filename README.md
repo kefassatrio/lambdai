@@ -38,7 +38,8 @@
   mengeluarkan hasil reduksi yang ada sebelumnya saja.
   Untuk fungsi `toNumber`, saya mengambil inspirasi dari sumber: 
   https://stackoverflow.com/questions/58687538/converting-from-church-encoding-to-numerals
-  fungsi ini menerapkan fitur bawaan dari Haskell yaitu `Maybe` yang dapat digunakan untuk 
+  
+  Fungsi `toNumber` ini menerapkan fitur bawaan dari Haskell yaitu `Maybe` yang dapat digunakan untuk 
   menghindari error.
   
   #### Program ini dapat dijalankan dengan cara mengikuti tahap-tahapan yang tercantum di bagian bawah ini (README dari repo original).
