@@ -24,7 +24,8 @@
   tepat.
   
   Selain meng-edit `src/Parser.hs`, saya juga meng-edit `src/Reducer/Renderer.hs`.
-  Hal ini dikarenakan, program akan merekursi untuk mereduksi lambda yang di-input
+  Hal ini dikarenakan, program akan merekursi suatu fungsi bernama `renderSteps`
+  yang didefinisikan di `src/Reducer/Renderer.hs` untuk mereduksi lambda yang di-input
   user dan jika sudah tidak dapat direduksi, program akan mengeluarkan outputnya,
   namun karena tugas ini mengharuskan kita untuk mentranslate output church numeral
   menjadi angka/integer, saya harus membuat fungsi yang akan meng-convert,
@@ -37,7 +38,7 @@
   mengeluarkan hasil reduksi yang ada sebelumnya saja.
   Untuk fungsi `toNumber`, saya mengambil inspirasi dari sumber: 
   https://stackoverflow.com/questions/58687538/converting-from-church-encoding-to-numerals
-  fungsi ini menerapkan fitur bawaan dari Haskell yaitu ~Maybe~ yang dapat digunakan untuk 
+  fungsi ini menerapkan fitur bawaan dari Haskell yaitu `Maybe` yang dapat digunakan untuk 
   menghindari error.
   
   #### Program ini dapat dijalankan dengan cara mengikuti tahap-tahapan yang tercantum di bagian bawah ini (README dari repo original).
