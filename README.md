@@ -30,17 +30,18 @@
   namun karena tugas ini mengharuskan kita untuk mentranslate output church numeral
   menjadi angka/integer, saya harus membuat fungsi yang akan meng-convert,
   saya namakan `toNumber`. Fungsi `toNumber` ini akan dipanggil saat rekursi 
-  tidak dapat me-reduksi lagi. Fungsi ini akan menerima hasil reduksi dan lalu
+  tidak dapat me-reduksi lagi. Fungsi ini akan menerima hasil reduksi (berupa object `Lambda`
+  yang didefinisikan di file `src/LambdaAST.hs`) dan lalu
   mengeluarkan integer berupa angka yang merepresentasikan church numeral.
   Namun jika hasil reduksi adalah bukan merupakan church numeral, 
   maka fungsi ini mengeluarkan `Nothing`. Jika fungsi mengeluarkan `Nothing`,
   maka rekursi sebelumnya akan menghandle `Nothing` tersebut dan 
-  mengeluarkan hasil reduksi yang ada sebelumnya saja.
+  mengeluarkan hasil reduksi yang ada sebelumnya.
   Untuk fungsi `toNumber`, saya mengambil inspirasi dari sumber: 
   https://stackoverflow.com/questions/58687538/converting-from-church-encoding-to-numerals
   
   Fungsi `toNumber` ini menerapkan fitur bawaan dari Haskell yaitu `Maybe` yang dapat digunakan untuk 
-  menghindari error.
+  menghindari error jika hasil reduksi bukanlah ekspresi church numeral.
   
   #### Program ini dapat dijalankan dengan cara mengikuti tahap-tahapan yang tercantum di bagian bawah ini (README dari repo original).
 
